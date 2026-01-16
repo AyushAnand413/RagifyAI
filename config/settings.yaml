@@ -1,0 +1,4 @@
+embedding_model: bge-base-en
+vector_store: faiss
+top_k: 5
+similarity_threshold: 0.6

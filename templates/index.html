@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCLTech Enterprise Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<div class="app-container">
+    <header class="chat-header">
+        <div class="logo-area">
+            <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+            <div>
+                <h1>HCLTech Assistant</h1>
+                <span class="status-badge"><span class="dot"></span> Online</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="clearChat()"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+    </header>
+
+    <div id="chat-box" class="chat-area">
+        <div class="welcome-message">
+            <div class="welcome-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <h2>Enterprise Agent Ready</h2>
+            <p>Ask about company policies, financial reports, or trigger automated workflows.</p>
+        </div>
+    </div>
+
+    <div id="loading-indicator" class="loading hidden">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    </div>
+
+    <div class="input-wrapper">
+        <div class="input-container">
+            <input type="text" id="query" placeholder="Ask a question or request an action..." autocomplete="off">
+            <button onclick="sendQuery()" id="send-btn">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+        <div class="footer-text">AI generated responses can be inaccurate. Verify important information.</div>
+    </div>
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
