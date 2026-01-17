@@ -1,1 +1,248 @@
-# Corporate-bot
+# Corporate-Bot 🤖
+
+### Agentic Assistant for Annual Report Q&A and Workplace Actions
+
+An **offline, agentic AI assistant** that can **accurately answer questions from large corporate PDFs** (HCLTech Annual Report) and **trigger structured workplace actions** (e.g., IT tickets, HR requests) — built for **real-time local demos**.
+
+---
+
+## 🚀 Problem Statement
+
+Enterprises struggle to:
+
+* Extract **accurate, page-cited answers** from long PDFs
+* Avoid hallucinations in financial and compliance data
+* Convert natural language commands into **structured actions**
+
+**Corporate-Bot** solves this using a **production-grade RAG + Agent Supervisor architecture**, running fully **offline**.
+
+---
+
+## 🧠 Key Capabilities
+
+### 📄 Chat with PDF (RAG)
+
+* Ask factual or conceptual questions from the annual report
+* Answers are **grounded**, **page-cited**, and **auditable**
+* Handles **text, tables, and images** correctly
+
+### ⚙️ Action Intelligence
+
+* Understands intent (question vs action)
+* Produces **structured JSON outputs** for actions
+* Example:
+
+  > “Create a ticket for VPN not working”
+
+### 🛑 Hallucination Control
+
+* Strict refusal logic for missing information
+* No guessing on tables or financial data
+* Explicit “Information not found” responses
+
+---
+
+## 🏗️ Architecture Overview
+
+PDF
+ │
+ ├─▶ Unstructured PDF Parser
+ │     ├─ Text
+ │     ├─ Tables (HTML preserved)
+ │     └─ Images
+ │
+ ├─▶ Structure-Aware Chunking
+ │
+ ├─▶ Embeddings (BGE-base)
+ │
+ ├─▶ FAISS Vector Index
+ │
+ ├─▶ Retriever (Top-K Recall)
+ │
+ ├─▶ Cross-Encoder Reranker
+ │
+ ├─▶ Context Builder
+ │
+ ├─▶ Agent Supervisor
+ │     ├─ Intent Classification
+ │     ├─ Refusal Logic
+ │     ├─ Action Routing
+ │
+ └─▶ LLM (Ollama – Mistral 7B)
+
+
+---
+
+## 🔍 RAG Design (Important)
+
+### ✔ Structure-Preserving Tables
+
+* Tables are **never flattened**
+* HTML is preserved at extraction time
+* Numeric answers always come from source tables
+
+### ✔ Two-Stage Retrieval
+
+1. **Bi-encoder retrieval** (wide recall)
+2. **Cross-encoder reranking** (high precision)
+
+### ✔ Evidence-Only Context
+
+The LLM only sees:
+
+* Retrieved text
+* Table references
+* Page numbers
+  → **No hallucinations**
+
+---
+
+## 🧑‍💻 Tech Stack
+
+| Component   | Tool                  |
+| ----------- | --------------------- |
+| PDF Parsing | unstructured        |
+| Embeddings  | BAAI/bge-base-en    |
+| Vector DB   | FAISS                 |
+| Reranker    | ms-marco-MiniLM     |
+| LLM         | Ollama (mistral:7b) |
+| Backend     | Flask                 |
+| Frontend    | HTML + CSS + JS       |
+| Language    | Python                |
+
+---
+
+## 📁 Project Structure
+
+Corporate-bot/
+│
+├── actions/              # Action registry & execution
+├── agent/                # Agent supervisor & intent logic
+├── ingestion/            # PDF parsing, tables, chunking
+├── retrieval/            # Embedding, FAISS, reranking
+├── llm/                  # Ollama client & response generator
+├── templates/            # HTML frontend
+├── static/               # CSS & JS
+├── evaluation/           # Retrieval tests & debug tools
+├── utils/                # Helpers & logging
+│
+├── app.py                # Core pipeline entry
+├── web_app.py            # Flask web server
+├── requirements.txt
+└── README.md
+
+
+---
+
+## ▶️ How to Run Locally (Offline)
+
+### 1️⃣ Prerequisites
+
+* Python 3.9+
+* Ollama installed
+* Model pulled:
+
+bash
+ollama pull mistral
+
+
+---
+
+### 2️⃣ Install Dependencies
+
+bash
+pip install -r requirements.txt
+
+
+---
+
+### 3️⃣ Start the Application
+
+bash
+python web_app.py
+
+
+Open in browser:
+
+http://localhost:5000
+
+
+---
+
+## 🧪 Example Queries
+
+### 📄 PDF Question
+
+**Q:** What was the revenue growth in FY25?
+**A:**
+
+> Revenue growth in FY25 was **6.5%**.
+> *(Source: Page 107)*
+
+---
+
+### 🧠 Conceptual Question
+
+**Q:** What are the key risks mentioned by the company?
+**A:**
+
+> Summarized explanation with page citations
+
+---
+
+### ⚙️ Action Command
+
+**Q:** Create a ticket for VPN not working
+**Output JSON:**
+
+json
+{
+  "action": "create_ticket",
+  "department": "IT",
+  "priority": "High",
+  "description": "VPN not working"
+}
+
+
+---
+
+### 🛑 Refusal Case
+
+**Q:** What is the quantum entanglement revenue?
+**A:**
+
+> Information not found in the document.
+
+---
+
+## 🧾 Evaluation Criteria Alignment
+
+| Criteria               | How We Address It                     |
+| ---------------------- | ------------------------------------- |
+| Accuracy (30%)         | Page-cited RAG, table-safe extraction |
+| Agent Capability (30%) | Deterministic action JSON             |
+| Impact (25%)           | Digital workplace automation          |
+| Presentation (15%)     | Clean UI + explainable architecture   |
+
+---
+
+## 🔐 Safety & Trust
+
+* No hallucinated numbers
+* No table reconstruction from text
+* Explicit refusals when evidence is missing
+* Fully auditable answers
+
+---
+
+## 🏁 Conclusion
+
+**Corporate-Bot** demonstrates a **real-world, production-ready agentic assistant** that combines:
+
+* Accurate document intelligence
+* Robust retrieval
+* Deterministic action execution
+
+Designed specifically for **enterprise-grade trust and offline demos**.
+
+---
