@@ -1,8 +1,7 @@
-pip install "unstructured[pdf]" unstructured-inference
-pip install pypdf pdfminer.six pillow pytesseract opencv-python layoutparser
-pip install transformers pillow paddleocr paddlepaddle
-pip install sentence-transformers
-pip install faiss-cpu
-pip install numpy
-pip install requests
-pip install flask
+﻿flask==3.0.3
+requests==2.32.3
+faiss-cpu==1.13.2
+sentence-transformers==3.0.1
+unstructured[pdf]==0.14.10
+numpy==1.26.4
+pytest==8.3.2

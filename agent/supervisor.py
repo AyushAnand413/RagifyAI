@@ -1,11 +1,12 @@
-import json
+﻿import json
+import os
 
 from click import prompt
 
 from agent.intent_classifier import classify_intent
 from agent.prompt_builder import build_prompt, build_action_prompt
 from agent.refusal import refusal_response
-from llm.ollama_client import call_ollama
+from llm.hf_inference_client import HFInferenceClient, HFGenerationError
 
 from retrieval.retriever import Retriever
 from retrieval.reranker import Reranker
@@ -16,20 +17,28 @@ class AgentSupervisor:
     def __init__(self):
         print("🤖 Initializing Agent Supervisor...")
 
-        self.retriever = Retriever(
-            index_path="data/processed/chunks.faiss",
-            meta_path="data/processed/chunks_meta.json",
-            initial_top_k=25
-        )
+        self.retriever = None
+        self.tables_raw = []
+        self.doc_loaded = False
 
         self.reranker = Reranker()
+        self.hf_client = HFInferenceClient(
+            api_token=os.getenv("HF_TOKEN", ""),
+            generation_model=os.getenv("HF_GENERATION_MODEL", "google/flan-t5-large"),
+            timeout=90
+        )
 
-        try:
-            with open("data/processed/tables_raw.json", "r", encoding="utf-8") as f:
-                self.tables_raw = json.load(f)
-        except FileNotFoundError:
-            print("⚠️ Warning: tables_raw.json not found. Table lookups disabled.")
-            self.tables_raw = []
+    def set_active_document(self, index, metadata, tables_raw):
+        self.retriever = Retriever(
+            index_object=index,
+            metadata_object=metadata,
+            initial_top_k=25
+        )
+        self.tables_raw = tables_raw or []
+        self.doc_loaded = True
+
+    def has_active_document(self):
+        return self.doc_loaded and self.retriever is not None
 
     # ---------------------------
     # Table Loader
@@ -55,11 +64,17 @@ class AgentSupervisor:
         intent = classify_intent(query)
 
         # ==================================================
-        # ACTION PATH — IT SERVICE DESK
+        # ACTION PATH - IT SERVICE DESK
         # ==================================================
         if intent == "ACTION":
             prompt = build_action_prompt(query)
-            raw_output = call_ollama(prompt)
+            try:
+                raw_output = self.hf_client.generate(prompt)
+            except HFGenerationError:
+                return {
+                    "type": "action",
+                    "answer": "Model temporarily unavailable. Please try again."
+                }
 
             try:
                 extracted = json.loads(raw_output)
@@ -79,8 +94,14 @@ class AgentSupervisor:
             }
 
         # ==================================================
-        # INFORMATION PATH — RAG (FIXED)
+        # INFORMATION PATH - RAG
         # ==================================================
+        if not self.has_active_document():
+            return {
+                "type": "information",
+                "answer": "Please upload a PDF first."
+            }
+
         candidates = self.retriever.retrieve(query)
         ranked_results = self.reranker.rerank(query, candidates, top_k=7)
 
@@ -93,7 +114,7 @@ class AgentSupervisor:
         context_payload = build_context(ranked_results)
         top_matches = context_payload["context"][:2]
 
-        # ✅ Inject page numbers directly into the text
+        # Inject page numbers directly into the text
         context_parts = []
         for c in top_matches:
             pages = c.get("pages", [])
@@ -116,11 +137,16 @@ class AgentSupervisor:
             tables=raw_tables,
             page="Unknown"  # kept for signature compatibility
         )
-        # 🔍 DEBUG: check prompt size
-        print("🔍 Prompt length:", len(prompt))  #comment out later 
-        answer = call_ollama(prompt)
 
-        if not answer or answer.strip() == "Information not found in the document.":
+        try:
+            answer = self.hf_client.generate(prompt)
+        except HFGenerationError:
+            return {
+                "type": "information",
+                "answer": "Model temporarily unavailable. Please try again."
+            }
+
+        if answer.strip() == "Information not found in the document.":
             return {
                 "type": "information",
                 "answer": refusal_response()
