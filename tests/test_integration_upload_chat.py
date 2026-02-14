@@ -47,8 +47,9 @@ def client(app_module):
 
 
 def test_real_pdf_upload_then_chat(client):
-    pdf_path = pathlib.Path("data/raw/press.pdf")
-    assert pdf_path.exists(), "Expected fixture PDF at data/raw/press.pdf"
+    # 🔹 Correct portable fixture path
+    pdf_path = pathlib.Path(__file__).parent / "fixtures" / "press.pdf"
+    assert pdf_path.exists(), f"Expected fixture PDF at {pdf_path}"
 
     with pdf_path.open("rb") as f:
         upload_resp = client.post(
@@ -62,10 +63,13 @@ def test_real_pdf_upload_then_chat(client):
     assert isinstance(upload_payload, dict)
     assert upload_payload.get("status") == "success"
 
+    # After upload, chat should work
     chat_resp = client.post("/chat", json={"query": "Give a summary"})
     assert chat_resp.status_code == 200
 
     chat_payload = chat_resp.get_json()
     assert isinstance(chat_payload, dict)
     assert ("answer" in chat_payload) or ("action" in chat_payload)
+
+    # Ensure upload guard is no longer triggered
     assert chat_payload.get("answer") != "Please upload a PDF first."
