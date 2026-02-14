@@ -1,12 +1,18 @@
-# Corporate-Bot 🤖
+﻿---
+title: Corporate Bot Backend
+emoji: 🤖
+sdk: docker
+app_port: 7860
+---
+# Corporate-Bot ðŸ¤–
 
 ### Agentic Assistant for Annual Report Q&A and Workplace Actions
 
-An **offline, agentic AI assistant** that can **accurately answer questions from large corporate PDFs** (HCLTech Annual Report) and **trigger structured workplace actions** (e.g., IT tickets, HR requests) — built for **real-time local demos**.
+An **offline, agentic AI assistant** that can **accurately answer questions from large corporate PDFs** (HCLTech Annual Report) and **trigger structured workplace actions** (e.g., IT tickets, HR requests) â€” built for **real-time local demos**.
 
 ---
 
-## 🚀 Problem Statement
+## ðŸš€ Problem Statement
 
 Enterprises struggle to:
 
@@ -18,86 +24,86 @@ Enterprises struggle to:
 
 ---
 
-## 🧠 Key Capabilities
+## ðŸ§  Key Capabilities
 
-### 📄 Chat with PDF (RAG)
+### ðŸ“„ Chat with PDF (RAG)
 
 * Ask factual or conceptual questions from the annual report
 * Answers are **grounded**, **page-cited**, and **auditable**
 * Handles **text, tables, and images** correctly
 
-### ⚙️ Action Intelligence
+### âš™ï¸ Action Intelligence
 
 * Understands intent (question vs action)
 * Produces **structured JSON outputs** for actions
 * Example:
 
-  > “Create a ticket for VPN not working”
+  > â€œCreate a ticket for VPN not workingâ€
 
-### 🛑 Hallucination Control
+### ðŸ›‘ Hallucination Control
 
 * Strict refusal logic for missing information
 * No guessing on tables or financial data
-* Explicit “Information not found” responses
+* Explicit â€œInformation not foundâ€ responses
 
 ---
 
-## 🏗️ Architecture Overview
+## ðŸ—ï¸ Architecture Overview
 
 PDF
- │
- ├─▶ Unstructured PDF Parser
- │     ├─ Text
- │     ├─ Tables (HTML preserved)
- │     └─ Images
- │
- ├─▶ Structure-Aware Chunking
- │
- ├─▶ Embeddings (BGE-base)
- │
- ├─▶ FAISS Vector Index
- │
- ├─▶ Retriever (Top-K Recall)
- │
- ├─▶ Cross-Encoder Reranker
- │
- ├─▶ Context Builder
- │
- ├─▶ Agent Supervisor
- │     ├─ Intent Classification
- │     ├─ Refusal Logic
- │     ├─ Action Routing
- │
- └─▶ LLM (Ollama – Mistral 7B)
+ â”‚
+ â”œâ”€â–¶ Unstructured PDF Parser
+ â”‚     â”œâ”€ Text
+ â”‚     â”œâ”€ Tables (HTML preserved)
+ â”‚     â””â”€ Images
+ â”‚
+ â”œâ”€â–¶ Structure-Aware Chunking
+ â”‚
+ â”œâ”€â–¶ Embeddings (BGE-base)
+ â”‚
+ â”œâ”€â–¶ FAISS Vector Index
+ â”‚
+ â”œâ”€â–¶ Retriever (Top-K Recall)
+ â”‚
+ â”œâ”€â–¶ Cross-Encoder Reranker
+ â”‚
+ â”œâ”€â–¶ Context Builder
+ â”‚
+ â”œâ”€â–¶ Agent Supervisor
+ â”‚     â”œâ”€ Intent Classification
+ â”‚     â”œâ”€ Refusal Logic
+ â”‚     â”œâ”€ Action Routing
+ â”‚
+ â””â”€â–¶ LLM (Ollama â€“ Mistral 7B)
 
 
 ---
 
-## 🔍 RAG Design (Important)
+## ðŸ” RAG Design (Important)
 
-### ✔ Structure-Preserving Tables
+### âœ” Structure-Preserving Tables
 
 * Tables are **never flattened**
 * HTML is preserved at extraction time
 * Numeric answers always come from source tables
 
-### ✔ Two-Stage Retrieval
+### âœ” Two-Stage Retrieval
 
 1. **Bi-encoder retrieval** (wide recall)
 2. **Cross-encoder reranking** (high precision)
 
-### ✔ Evidence-Only Context
+### âœ” Evidence-Only Context
 
 The LLM only sees:
 
 * Retrieved text
 * Table references
 * Page numbers
-  → **No hallucinations**
+  â†’ **No hallucinations**
 
 ---
 
-## 🧑‍💻 Tech Stack
+## ðŸ§‘â€ðŸ’» Tech Stack
 
 | Component   | Tool                  |
 | ----------- | --------------------- |
@@ -112,31 +118,31 @@ The LLM only sees:
 
 ---
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 Corporate-bot/
-│
-├── actions/              # Action registry & execution
-├── agent/                # Agent supervisor & intent logic
-├── ingestion/            # PDF parsing, tables, chunking
-├── retrieval/            # Embedding, FAISS, reranking
-├── llm/                  # Ollama client & response generator
-├── templates/            # HTML frontend
-├── static/               # CSS & JS
-├── evaluation/           # Retrieval tests & debug tools
-├── utils/                # Helpers & logging
-│
-├── app.py                # Core pipeline entry
-├── web_app.py            # Flask web server
-├── requirements.txt
-└── README.md
+â”‚
+â”œâ”€â”€ actions/              # Action registry & execution
+â”œâ”€â”€ agent/                # Agent supervisor & intent logic
+â”œâ”€â”€ ingestion/            # PDF parsing, tables, chunking
+â”œâ”€â”€ retrieval/            # Embedding, FAISS, reranking
+â”œâ”€â”€ llm/                  # Ollama client & response generator
+â”œâ”€â”€ templates/            # HTML frontend
+â”œâ”€â”€ static/               # CSS & JS
+â”œâ”€â”€ evaluation/           # Retrieval tests & debug tools
+â”œâ”€â”€ utils/                # Helpers & logging
+â”‚
+â”œâ”€â”€ app.py                # Core pipeline entry
+â”œâ”€â”€ web_app.py            # Flask web server
+â”œâ”€â”€ requirements.txt
+â””â”€â”€ README.md
 
 
 ---
 
-## ▶️ How to Run Locally (Offline)
+## â–¶ï¸ How to Run Locally (Offline)
 
-### 1️⃣ Prerequisites
+### 1ï¸âƒ£ Prerequisites
 
 * Python 3.9+
 * Ollama installed
@@ -148,7 +154,7 @@ ollama pull mistral
 
 ---
 
-### 2️⃣ Install Dependencies
+### 2ï¸âƒ£ Install Dependencies
 
 bash
 pip install -r requirements.txt
@@ -156,7 +162,7 @@ pip install -r requirements.txt
 
 ---
 
-### 3️⃣ Start the Application
+### 3ï¸âƒ£ Start the Application
 
 bash
 python web_app.py
@@ -169,9 +175,9 @@ http://localhost:5000
 
 ---
 
-## 🧪 Example Queries
+## ðŸ§ª Example Queries
 
-### 📄 PDF Question
+### ðŸ“„ PDF Question
 
 **Q:** What was the revenue growth in FY25?
 **A:**
@@ -181,7 +187,7 @@ http://localhost:5000
 
 ---
 
-### 🧠 Conceptual Question
+### ðŸ§  Conceptual Question
 
 **Q:** What are the key risks mentioned by the company?
 **A:**
@@ -190,7 +196,7 @@ http://localhost:5000
 
 ---
 
-### ⚙️ Action Command
+### âš™ï¸ Action Command
 
 **Q:** Create a ticket for VPN not working
 **Output JSON:**
@@ -206,7 +212,7 @@ json
 
 ---
 
-### 🛑 Refusal Case
+### ðŸ›‘ Refusal Case
 
 **Q:** What is the quantum entanglement revenue?
 **A:**
@@ -215,7 +221,7 @@ json
 
 ---
 
-## 🧾 Evaluation Criteria Alignment
+## ðŸ§¾ Evaluation Criteria Alignment
 
 | Criteria               | How We Address It                     |
 | ---------------------- | ------------------------------------- |
@@ -226,7 +232,7 @@ json
 
 ---
 
-## 🔐 Safety & Trust
+## ðŸ” Safety & Trust
 
 * No hallucinated numbers
 * No table reconstruction from text
@@ -235,7 +241,7 @@ json
 
 ---
 
-## 🏁 Conclusion
+## ðŸ Conclusion
 
 **Corporate-Bot** demonstrates a **real-world, production-ready agentic assistant** that combines:
 
@@ -246,3 +252,4 @@ json
 Designed specifically for **enterprise-grade trust and offline demos**.
 
 ---
+
