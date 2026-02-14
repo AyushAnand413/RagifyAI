@@ -79,6 +79,8 @@ jobs:
             --exclude '__pycache__/' \
             --exclude '.github/' \
             --exclude '.git/' \
+            --exclude 'tests/fixtures/' \
+            --exclude '*.pdf' \
             --exclude 'hf-space/' \
             ./ hf-space/ || [ $? -eq 24 ]
 
