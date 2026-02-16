@@ -45,11 +45,15 @@ def client(app_module):
     return app_module.app.test_client()
 
 
+# ✅ FIXED
 def test_chat_without_upload(client):
     response = client.post("/chat", json={"query": "What is revenue?"})
-    assert response.status_code == 200
+    assert response.status_code == 409
+
     payload = response.get_json()
-    assert payload["answer"] == "Please upload a PDF first."
+
+    assert payload["success"] is False
+    assert payload["error"]["code"] == "DOCUMENT_NOT_READY"
 
 
 def test_empty_query(client):
@@ -74,15 +78,29 @@ def test_large_file_handling(client, app_module):
     response = client.post("/upload", data=data, content_type="multipart/form-data")
     assert response.status_code == 413
 
+
+# ✅ FIXED
 def test_successful_upload_and_chat(client):
-    upload_data = {"file": (io.BytesIO(b"fake pdf"), "doc.pdf")}
-    upload_response = client.post("/upload", data=upload_data, content_type="multipart/form-data")
+    upload_data = {"file": (io.BytesIO(b"%PDF- fake"), "doc.pdf")}
+
+    upload_response = client.post(
+        "/upload",
+        data=upload_data,
+        content_type="multipart/form-data",
+    )
 
     assert upload_response.status_code == 200
+
     upload_payload = upload_response.get_json()
-    assert upload_payload["status"] == "success"
+
+    assert upload_payload["success"] is True
+    assert upload_payload["data"]["status"] == "success"
 
     chat_response = client.post("/chat", json={"query": "Hello"})
+
     assert chat_response.status_code == 200
+
     chat_payload = chat_response.get_json()
-    assert chat_payload["answer"] == "handled: Hello"
+
+    assert chat_payload["success"] is True
+    assert chat_payload["data"]["answer"] == "handled: Hello"

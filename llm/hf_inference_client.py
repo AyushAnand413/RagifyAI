@@ -13,9 +13,22 @@ class HFInferenceClient:
         self.api_token = api_token or os.getenv("HF_TOKEN", "")
         self.generation_model = generation_model
         self.timeout = timeout
-        self.url = f"https://api-inference.huggingface.co/models/{generation_model}"
+        self.url = os.getenv("HF_INFERENCE_V1_URL", "https://router.huggingface.co/v1/chat/completions")
 
     def _extract_text(self, payload: Any) -> str:
+        if isinstance(payload, dict) and "choices" in payload:
+            choices = payload.get("choices")
+            if isinstance(choices, list) and choices:
+                first = choices[0]
+                if isinstance(first, dict):
+                    message = first.get("message")
+                    if isinstance(message, dict):
+                        content = message.get("content")
+                        if isinstance(content, str):
+                            text = content.strip()
+                            if text:
+                                return text
+
         if isinstance(payload, dict):
             if "error" in payload:
                 raise HFGenerationError(str(payload.get("error", "HF inference error")))
@@ -51,18 +64,20 @@ class HFInferenceClient:
         raise HFGenerationError("Invalid HF response format")
 
     def generate(self, prompt: str, max_new_tokens: int = 256) -> str:
+        if not self.api_token:
+            raise HFGenerationError("HF token missing. Set HF_TOKEN environment variable.")
+
         headers = {}
-        if self.api_token:
-            headers["Authorization"] = f"Bearer {self.api_token}"
+        headers["Authorization"] = f"Bearer {self.api_token}"
 
         payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": max_new_tokens,
-                "temperature": 0.1,
-                "top_p": 0.9,
-                "return_full_text": False,
-            },
+            "model": self.generation_model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_new_tokens,
+            "temperature": 0.1,
+            "top_p": 0.9,
         }
 
         try:

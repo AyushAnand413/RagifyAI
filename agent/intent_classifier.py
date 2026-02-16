@@ -1,4 +1,4 @@
-from llm.ollama_client import call_ollama
+from llm.response_generator import generate_text
 
 INTENT_PROMPT = """
 You are an enterprise IT assistant.
@@ -14,7 +14,7 @@ Return ONLY the category name.
 """
 
 def classify_intent(query: str) -> str:
-    result = call_ollama(INTENT_PROMPT.format(query=query)).strip().upper()
+    result = generate_text(INTENT_PROMPT.format(query=query), max_new_tokens=8).strip().upper()
 
     if result not in ("ACTION", "INFORMATION"):
         return "INFORMATION"

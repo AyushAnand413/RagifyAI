@@ -24,7 +24,7 @@ class AgentSupervisor:
         self.reranker = Reranker()
         self.hf_client = HFInferenceClient(
             api_token=os.getenv("HF_TOKEN", ""),
-            generation_model=os.getenv("HF_GENERATION_MODEL", "google/flan-t5-large"),
+            generation_model=os.getenv("HF_GENERATION_MODEL", "meta-llama/Llama-3.2-3B-Instruct:novita"),
             timeout=90
         )
 
