@@ -1,9 +1,5 @@
 ﻿FROM python:3.10-slim
 
-# ==========================================
-# Environment variables
-# ==========================================
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -31,10 +27,6 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 
-# ==========================================
-# Verify Tesseract installation
-# ==========================================
-
 RUN tesseract --version
 
 
@@ -49,17 +41,18 @@ RUN python -m pip install --upgrade pip && \
 
 
 # ==========================================
-# Install NLTK data at build time (CRITICAL FIX)
+# Install ALL required NLTK packages
 # ==========================================
 
 RUN mkdir -p /usr/local/nltk_data && \
     python -m nltk.downloader -d /usr/local/nltk_data punkt && \
+    python -m nltk.downloader -d /usr/local/nltk_data punkt_tab && \
     python -m nltk.downloader -d /usr/local/nltk_data averaged_perceptron_tagger && \
     python -m nltk.downloader -d /usr/local/nltk_data wordnet
 
 
 # ==========================================
-# Copy application code
+# Copy application
 # ==========================================
 
 COPY . /app
@@ -73,7 +66,7 @@ EXPOSE 7860
 
 
 # ==========================================
-# Run Flask app
+# Run Flask
 # ==========================================
 
 CMD ["sh", "-c", "python -m flask --app web_app:app run --host 0.0.0.0 --port ${PORT:-7860}"]
