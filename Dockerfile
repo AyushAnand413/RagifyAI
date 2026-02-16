@@ -10,10 +10,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 
-# ==========================================
-# Install system dependencies
-# ==========================================
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libgl1 \
@@ -30,43 +26,23 @@ RUN apt-get update && \
 RUN tesseract --version
 
 
-# ==========================================
-# Install Python dependencies
-# ==========================================
-
 COPY requirements.txt /app/requirements.txt
 
 RUN python -m pip install --upgrade pip && \
     python -m pip install -r /app/requirements.txt
 
 
-# ==========================================
-# Install ALL required NLTK packages
-# ==========================================
-
+# FINAL NLTK INSTALL FIX
 RUN mkdir -p /usr/local/nltk_data && \
     python -m nltk.downloader -d /usr/local/nltk_data punkt && \
     python -m nltk.downloader -d /usr/local/nltk_data punkt_tab && \
     python -m nltk.downloader -d /usr/local/nltk_data averaged_perceptron_tagger && \
+    python -m nltk.downloader -d /usr/local/nltk_data averaged_perceptron_tagger_eng && \
     python -m nltk.downloader -d /usr/local/nltk_data wordnet
 
 
-# ==========================================
-# Copy application
-# ==========================================
-
 COPY . /app
 
-
-# ==========================================
-# Expose port
-# ==========================================
-
 EXPOSE 7860
-
-
-# ==========================================
-# Run Flask
-# ==========================================
 
 CMD ["sh", "-c", "python -m flask --app web_app:app run --host 0.0.0.0 --port ${PORT:-7860}"]
