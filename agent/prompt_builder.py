@@ -1,64 +1,118 @@
-# -----------------------------
-# ACTION PROMPT (IT SERVICE DESK)
-# -----------------------------
-def build_action_prompt(user_input: str) -> str:
-    return f"""
-You are an IT Service Desk automation engine.
-
-Extract structured information from the user request.
-
-FIELDS:
-- department: IT / HR / Finance / Unknown
-- issue_summary: short, professional description
-- priority: Low / Medium / High
-
-RULES:
-- VPN, login, laptop, network, system access → IT
-- Work-blocking issues → High priority
-- Infer conservatively
-- Return ONLY valid JSON
-- No explanations
-
-USER REQUEST:
-"{user_input}"
-"""
+# ============================================================
+# PURE RAG PROMPT BUILDER (PRODUCTION GRADE)
+# Optimized for small models like Llama-3.2-1B
+# ============================================================
 
 
-# -----------------------------
-# INFORMATION PROMPT (RAG)
-# -----------------------------
-def build_prompt(question, section_text, tables, page):
+def build_prompt(question: str, section_text: str, tables: list, page: str):
+
     prompt = f"""
-You are an enterprise document assistant.
+You are a strict enterprise document question-answering assistant.
 
-TASK:
-Answer strictly from the evidence provided.
-Do NOT infer.
-Do NOT calculate.
+You MUST follow these rules EXACTLY.
 
-If the answer is NOT explicitly present, respond exactly with:
-"Information not found in the document."
 
-QUESTION:
+==============================
+PRIMARY RULE
+==============================
+
+Answer ONLY using the information provided in EVIDENCE below.
+
+DO NOT use outside knowledge.
+
+DO NOT guess.
+
+DO NOT infer.
+
+DO NOT assume.
+
+DO NOT add extra information.
+
+
+==============================
+IF ANSWER NOT FOUND
+==============================
+
+If the answer is not explicitly present in the evidence, respond EXACTLY:
+
+Information not found in the document.
+
+
+==============================
+QUESTION
+==============================
+
 {question}
 
-EVIDENCE:
-TEXT:
+
+==============================
+EVIDENCE
+==============================
+
+TEXT EVIDENCE:
+
 {section_text}
+
 """
+
+
+    # -------------------------------------------------------
+    # ADD TABLES (VERY IMPORTANT)
+    # -------------------------------------------------------
 
     if tables:
-        prompt += "\nTABLE DATA (AUTHORITATIVE):\n"
+
+        prompt += """
+
+TABLE EVIDENCE:
+"""
+
         for i, table in enumerate(tables, 1):
-            prompt += f"\nTable {i}:\n{table}\n"
+
+            prompt += f"""
+
+Table {i}:
+{table}
+
+"""
+
+
+    # -------------------------------------------------------
+    # OUTPUT FORMAT (STRICT)
+    # -------------------------------------------------------
 
     prompt += """
-OUTPUT RULES:
-- If found:
-  - Answer in 1–2 sentences
-  - Quote values exactly
-  - End with the page number explicitly shown in the text, e.g.:
-    (Source: Page 107)
+
+==============================
+OUTPUT FORMAT
+==============================
+
+If answer is found:
+
+• Answer in correct and concise sentences.
+
+• Use EXACT words from evidence.
+
+• DO NOT rephrase numbers.
+
+• DO NOT explain extra.
+
+• ALWAYS end answer with source page like:
+
+(Source: Page X)
+
+
+==============================
+IMPORTANT
+==============================
+
+Never answer without evidence.
+
+Never fabricate page numbers.
+
+Never answer from outside knowledge.
+
 """
+
 
     return prompt.strip()
