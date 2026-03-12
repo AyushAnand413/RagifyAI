@@ -303,7 +303,10 @@ HuggingFace Inference API
 # 👨‍💻 Author
 
 Ayush Kumar Anand
+
 Swarnim Vatsyayan
+
+Shuchay Viswanathan
 
 ---
 
