@@ -1,10 +1,3 @@
----
-title: Corporate RAG Bot Backend
-emoji: 🤖
-sdk: docker
-app_port: 7860
----
-
 
 # 🤖 Corporate-Bot — Enterprise RAG Assistant
 
