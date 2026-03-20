@@ -46,16 +46,35 @@ def build_chunks(
             if img["page"] in pages
         ]
 
-        chunk_id[0] += 1
+        full_text = "\n".join(current_text)
+        words = full_text.replace('\n', ' \n ').split(' ')
+        words = [w for w in words if w != '']
+        
+        MAX_WORDS = 300
+        OVERLAP = 50
+        
+        if not words:
+            return
+            
+        i = 0
+        part = 1
+        while i < len(words):
+            chunk_words = words[i:i + MAX_WORDS]
+            split_text = " ".join(chunk_words).replace(' \n ', '\n').strip()
+            
+            chunk_id[0] += 1
 
-        chunks.append({
-            "chunk_id": f"chunk_{chunk_id[0]:03d}",
-            "section": current_section,
-            "pages": pages,
-            "text": "\n".join(current_text),
-            "tables": attached_tables,
-            "images": attached_images
-        })
+            chunks.append({
+                "chunk_id": f"chunk_{chunk_id[0]:03d}",
+                "section": f"{current_section} (Part {part})" if len(words) > MAX_WORDS else current_section,
+                "pages": pages,
+                "text": split_text,
+                "tables": attached_tables,
+                "images": attached_images
+            })
+            
+            part += 1
+            i += MAX_WORDS - OVERLAP
 
     for el in text_elements:
 
@@ -71,12 +90,16 @@ def build_chunks(
             current_text = []
             current_pages = set()
 
-        elif el_type == "NarrativeText":
+        elif el_type in ["NarrativeText", "ListItem", "Text"]:
 
             if not current_section:
-                continue
+                # Fallback to a default section to prevent discarding early text
+                current_section = "General"
 
-            current_text.append(el_text)
+            if el_type == "ListItem":
+                current_text.append(f"- {el_text}")
+            else:
+                current_text.append(el_text)
 
             if el_page is not None:
                 current_pages.add(el_page)

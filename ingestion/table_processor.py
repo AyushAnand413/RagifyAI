@@ -1,24 +1,33 @@
 import json
 
 
+import re
+
 def generate_table_summary(table):
     """
-    VERY conservative summary.
-    No numbers. No inference.
-    Used only for retrieval reference.
+    Programmatic summary extracting the first few cells or words.
+    Ensures unique embeddings for semantic retrieval.
     """
-    if table.get("table_type") == "structured":
+    table_type = table.get("table_type")
+    
+    if table_type == "structured":
+        html = table.get("table_html", "")
+        # Extract text from th and td tags
+        cells = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', html, re.IGNORECASE | re.DOTALL)
+        # Strip internal html tags
+        cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
+        cells = [c for c in cells if c]
+        
+        if cells:
+            preview = ", ".join(cells[:10])
+            return f"Structured table containing columns/data: [{preview} ...]"
         return "Structured table with rows and columns."
 
-    raw = table.get("raw_text", "")
-    text_lower = raw.lower()
-
-    if "revenue" in text_lower:
-        return "Table containing revenue-related data."
-    if "profit" in text_lower:
-        return "Table containing profit-related data."
-    if "employee" in text_lower:
-        return "Table containing employee-related data."
+    # For unstructured, use the beginning of raw_text
+    raw = table.get("raw_text", "").strip()
+    if raw:
+        preview = " ".join(raw.split()[:20])
+        return f"Table containing data: [{preview} ...]"
 
     return "Unstructured table containing numeric or textual data."
 

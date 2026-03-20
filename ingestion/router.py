@@ -18,7 +18,7 @@ def route_elements(input_path: str, output_dir: str):
 
         el["metadata"]["routed_as"] = el_type
 
-        if el_type in ["Title", "NarrativeText"]:
+        if el_type in ["Title", "NarrativeText", "ListItem", "Text"]:
             text_elements.append(el)
 
         elif el_type == "Table":
