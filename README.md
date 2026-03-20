@@ -1,4 +1,9 @@
-
+---
+title: Corporate RAG Bot Backend
+emoji: 🤖
+sdk: docker
+app_port: 7860
+---
 # 🤖 Corporate-Bot — Enterprise RAG Assistant
 
 **Corporate-Bot** is a production-grade, agentic Retrieval-Augmented Generation (RAG) assistant that enables users to upload corporate PDFs and interact with them using natural language.
