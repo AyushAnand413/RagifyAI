@@ -4,6 +4,7 @@ import { FileText, Trash2, Eye, UploadCloud, CheckCircle } from 'lucide-react'
 import { useStore, type Document } from '../store/useStore'
 import { cn } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { uploadPdf } from '../lib/api/client'
 
 export function Sidebar() {
   const { documents, addDocument, removeDocument, updateDocument } = useStore()
@@ -20,37 +21,38 @@ export function Sidebar() {
     setIsDragging(false)
   }
 
-  const simulateUpload = (file: File) => {
+  const handleUpload = async (file: File) => {
     const id = crypto.randomUUID()
     const sizeMb = (file.size / (1024 * 1024)).toFixed(1) + ' MB'
     const newDoc: Document = {
       id,
       name: file.name,
       size: sizeMb,
-      pages: Math.floor(Math.random() * 50) + 1, // Simulated
-      indexedAt: 'Just now',
+      pages: 1, // API currently does not return page count easily, defaulting to 1
+      indexedAt: 'Processing...',
       status: 'uploading',
       progress: 0
     }
     
     addDocument(newDoc)
 
-    // Simulate progress
-    let prog = 0
-    const interval = setInterval(() => {
-      prog += 20
-      if (prog <= 100) {
-        updateDocument(id, { progress: prog })
+    // Give visual feedback of request starting
+    updateDocument(id, { progress: 50, status: 'parsing' })
+
+    try {
+      const res = await uploadPdf(file);
+      if (res.success) {
+        updateDocument(id, { 
+          progress: 100, 
+          status: 'indexed', 
+          indexedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+        })
+      } else {
+        updateDocument(id, { status: 'error' })
       }
-      
-      if (prog === 40) updateDocument(id, { status: 'parsing' })
-      if (prog === 60) updateDocument(id, { status: 'chunking' })
-      if (prog === 80) updateDocument(id, { status: 'embedding' })
-      if (prog >= 100) {
-        updateDocument(id, { status: 'indexed', progress: 100 })
-        clearInterval(interval)
-      }
-    }, 500)
+    } catch (err) {
+      updateDocument(id, { status: 'error' })
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -58,12 +60,12 @@ export function Sidebar() {
     setIsDragging(false)
     const files = Array.from(e.dataTransfer.files)
     const pdfs = files.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'))
-    pdfs.forEach(simulateUpload)
+    pdfs.forEach(handleUpload)
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    files.forEach(simulateUpload)
+    files.forEach(handleUpload)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 

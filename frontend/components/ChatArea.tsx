@@ -4,6 +4,7 @@ import { Send, AlertCircle, Bot, User, ChevronDown } from 'lucide-react'
 import { useStore, type Message } from '../store/useStore'
 import { cn } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { sendChat } from '../lib/api/client'
 
 export function ChatArea() {
   const { messages, addMessage, documents, isGenerating, setGenerating } = useStore()
@@ -33,36 +34,48 @@ export function ChatArea() {
 
     setGenerating(true)
 
-    // Simulate API Call & Streaming
-    setTimeout(() => {
-      const assistantId = crypto.randomUUID()
+    try {
       const hasDocs = documents.some(d => d.status === 'indexed')
+      const assistantId = crypto.randomUUID()
       
       if (!hasDocs) {
         // Error state: No documents
         addMessage({
           id: assistantId,
           role: 'assistant',
-          content: "I couldn't find information about this in the uploaded documents.\n\nTry rephrasing your question or upload additional documents.",
+          content: "I couldn't find information about this in the uploaded documents.\n\nTry uploading documents first.",
           error: true
         })
         setGenerating(false)
         return
       }
 
-      // Success state with citation
+      const res = await sendChat({ query: userQuery });
+      
+      if (res.success && res.data && res.data.answer) {
+        addMessage({
+          id: assistantId,
+          role: 'assistant',
+          content: res.data.answer,
+        })
+      } else {
+        addMessage({
+          id: assistantId,
+          role: 'assistant',
+          content: "Sorry, I received an invalid response from the server.",
+          error: true
+        })
+      }
+    } catch (err: any) {
       addMessage({
-        id: assistantId,
+        id: crypto.randomUUID(),
         role: 'assistant',
-        content: "Based on the documents, the main topics covered include strategic initiatives, market analysis, and operational metrics.",
-        citation: {
-          file: documents[0]?.name || "Document.pdf",
-          page: 7,
-          text: "Section 3.1: Strategic initiatives for FY25 emphasize cross-functional agility. Market analysis indicates a 14% growth in our target segment. Operational metrics show improved pipeline velocity."
-        }
+        content: err?.message || "An error occurred while communicating with the backend.",
+        error: true
       })
+    } finally {
       setGenerating(false)
-    }, 1500)
+    }
   }
 
   return (
