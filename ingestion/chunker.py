@@ -21,11 +21,11 @@ def build_chunks(
     current_text = []
     current_pages = set()
 
-    chunk_id = 0
+    # Provide a mutable list to hold our scalar counter
+    # This avoids "chunk_id is not mutable from the current scope" errors
+    chunk_id = [0]
 
     def flush_chunk():
-        nonlocal chunk_id, current_section, current_text, current_pages
-
         if not current_section or not current_text:
             return
 
@@ -46,10 +46,10 @@ def build_chunks(
             if img["page"] in pages
         ]
 
-        chunk_id += 1
+        chunk_id[0] += 1
 
         chunks.append({
-            "chunk_id": f"chunk_{chunk_id:03d}",
+            "chunk_id": f"chunk_{chunk_id[0]:03d}",
             "section": current_section,
             "pages": pages,
             "text": "\n".join(current_text),
