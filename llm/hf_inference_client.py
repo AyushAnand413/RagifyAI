@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 from typing import Any
 
@@ -146,6 +146,10 @@ class HFInferenceClient:
                 return self._extract_text(
                     response.json()
                 )
+
+            except ValueError:
+            
+                print("API returned invalid JSON. Retrying...")
 
             except requests.Timeout:
 

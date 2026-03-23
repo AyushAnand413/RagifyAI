@@ -64,9 +64,9 @@ def filter_images(input_path, output_path):
 
         if is_informative(caption):
             informative.append({
-                "id": img["id"],
-                "page": img["page"],
-                "order": img["order"],
+                "id": img.get("id"),
+                "page": img.get("page"),
+                "order": img.get("order"),
                 "image_path": image_path,
                 "caption": caption
             })

@@ -50,7 +50,7 @@ def parse_pdf(pdf_path: str, output_path: str):
             page = el.metadata.page_number
 
 
-        parsed_elements.append({
+        element_data = {
 
             "id": f"el_{order:06d}",
 
@@ -60,6 +60,8 @@ def parse_pdf(pdf_path: str, output_path: str):
 
             "page": page,
 
+            "order": order,
+
             "metadata": {
 
                 "source": "unstructured",
@@ -68,7 +70,17 @@ def parse_pdf(pdf_path: str, output_path: str):
 
             }
 
-        })
+        }
+
+        if type(el).__name__ == "Table":
+            if getattr(el, "metadata", None) and getattr(el.metadata, "text_as_html", None):
+                element_data["table_type"] = "structured"
+                element_data["table_html"] = el.metadata.text_as_html
+            else:
+                element_data["table_type"] = "unstructured"
+                element_data["raw_text"] = el.text if hasattr(el, "text") else ""
+
+        parsed_elements.append(element_data)
 
 
     with open(output_path, "w", encoding="utf-8") as f:
