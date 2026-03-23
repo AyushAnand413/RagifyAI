@@ -32,18 +32,18 @@ def build_chunks(
         pages = sorted(list(current_pages))
 
         attached_tables = [
-            t["id"]
+            t.get("id")
             for t in tables_index
-            if t["page"] in pages
+            if t.get("page") in pages
         ]
 
         attached_images = [
             {
-                "page": img["page"],
-                "caption": img["caption"]
+                "page": img.get("page"),
+                "caption": img.get("caption", "")
             }
             for img in images
-            if img["page"] in pages
+            if img.get("page") in pages
         ]
 
         full_text = "\n".join(current_text)
@@ -78,7 +78,7 @@ def build_chunks(
 
     for el in text_elements:
 
-        el_type = el["type"]
+        el_type = el.get("type", "Text")
         el_text = el.get("text", "")
         el_page = el.get("page")
 

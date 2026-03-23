@@ -1,64 +1,24 @@
-# ============================================================
-# PURE RAG PROMPT BUILDER (PRODUCTION GRADE)
-# Optimized for small models like Llama-3.2-1B
-# ============================================================
-
-
 def build_prompt(question: str, section_text: str, tables: list, page: str):
 
     prompt = f"""
-You are a strict enterprise document question-answering assistant.
+Answer the question using ONLY the evidence below.
 
-You MUST follow these rules EXACTLY.
-
-
-==============================
-PRIMARY RULE
-==============================
-
-Answer ONLY using the information provided in EVIDENCE below.
-
-DO NOT use outside knowledge.
-
-DO NOT guess.
-
-DO NOT infer.
-
-DO NOT assume.
-
-DO NOT add extra information.
-
-
-==============================
-IF ANSWER NOT FOUND
-==============================
-
-If the answer is not explicitly present in the evidence, respond EXACTLY:
-
+If the answer is not explicitly supported by the evidence, respond EXACTLY:
 Information not found in the document.
 
+Rules:
+- Do not use outside knowledge.
+- Do not guess or infer.
+- Keep the answer concise and specific.
+- Preserve numbers exactly as written in the evidence.
+- Cite the page only when the evidence already shows a page label.
 
-==============================
-QUESTION
-==============================
-
+QUESTION:
 {question}
 
-
-==============================
-EVIDENCE
-==============================
-
 TEXT EVIDENCE:
-
 {section_text}
-
 """
-
-
-    # -------------------------------------------------------
-    # ADD TABLES (VERY IMPORTANT)
-    # -------------------------------------------------------
 
     if tables:
 
@@ -73,46 +33,14 @@ TABLE EVIDENCE:
 
 Table {i}:
 {table}
-
 """
-
-
-    # -------------------------------------------------------
-    # OUTPUT FORMAT (STRICT)
-    # -------------------------------------------------------
 
     prompt += """
 
-==============================
-OUTPUT FORMAT
-==============================
-
-If answer is found:
-
-• Answer in correct and concise sentences.
-
-• Use EXACT words from evidence.
-
-• DO NOT rephrase numbers.
-
-• DO NOT explain extra.
-
-• ALWAYS end answer with source page like:
-
-(Source: Page X)
-
-
-==============================
-IMPORTANT
-==============================
-
-Never answer without evidence.
-
-Never fabricate page numbers.
-
-Never answer from outside knowledge.
-
+OUTPUT:
+- If the answer is found, answer in 1-3 concise sentences.
+- If a page is visible in the evidence, append `(Source: Page X)` using that page.
+- Otherwise do not invent a page number.
 """
-
 
     return prompt.strip()

@@ -44,11 +44,11 @@ def process_images(input_path: str, output_path: str):
         ocr_text = extract_ocr(image_path)
 
         processed_images.append({
-            "id": img["id"],
-            "page": img["page"],
-            "order": img["order"],
+            "id": img.get("id"),
+            "page": img.get("page"),
+            "order": img.get("order"),
             "image_path": image_path,
-            "caption": img["caption"],
+            "caption": img.get("caption", ""),
             "ocr_raw_text": ocr_text,
             "semantic_summary":
                 "The image provides a visual representation of trends or metrics relevant to company performance."

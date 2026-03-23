@@ -41,19 +41,19 @@ def process_tables(input_path, raw_output_path, index_output_path):
 
     for table in tables:
         base = {
-            "id": table["id"],
-            "page": table["page"],
-            "order": table["order"],
-            "table_type": table["table_type"]
+            "id": table.get("id"),
+            "page": table.get("page"),
+            "order": table.get("order"),
+            "table_type": table.get("table_type")
         }
 
         # -------------------------------
         # STRUCTURED TABLE (HTML)
         # -------------------------------
-        if table["table_type"] == "structured":
+        if table.get("table_type") == "structured":
             tables_raw.append({
                 **base,
-                "table_html": table["table_html"]
+                "table_html": table.get("table_html", "")
             })
 
         # -------------------------------
@@ -69,8 +69,8 @@ def process_tables(input_path, raw_output_path, index_output_path):
         # INDEX ENTRY (RETRIEVAL ONLY)
         # -------------------------------
         tables_index.append({
-            "id": table["id"],
-            "page": table["page"],
+            "id": table.get("id"),
+            "page": table.get("page"),
             "summary": generate_table_summary(table)
         })
 
