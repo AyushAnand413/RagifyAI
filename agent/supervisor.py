@@ -35,6 +35,7 @@ class AgentSupervisor:
 
         self.reranker = Reranker()
         self.generation_client, self.generation_error = create_generation_client(task="generation")
+        self.hf_client = self.generation_client
 
     def set_active_document(self, index, metadata, tables_raw):
 
