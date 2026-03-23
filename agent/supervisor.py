@@ -3,38 +3,30 @@ import os
 from agent.prompt_builder import build_prompt
 from agent.refusal import refusal_response
 
-from llm.hf_inference_client import HFInferenceClient, HFGenerationError
+from llm.client_factory import create_generation_client
 
 from retrieval.retriever import Retriever
 from retrieval.reranker import Reranker
 from retrieval.context_builder import build_context
 
 
-# =====================================================
-# TEST COMPATIBILITY STUB
-# =====================================================
-# Required because pytest expects this symbol.
-# We force INFORMATION always (pure RAG mode).
-# =====================================================
-
 def classify_intent(_query: str) -> str:
     return "INFORMATION"
-
 
 
 class AgentSupervisor:
 
     def __init__(self):
 
-        print("🤖 Initializing Agent Supervisor...")
+        print("Initializing Agent Supervisor...")
 
         self.retriever = None
         self.tables_raw = []
         self.doc_loaded = False
         self.max_context_chunks = int(os.getenv("RAG_MAX_CONTEXT_CHUNKS", "5"))
-        self.min_retriever_score = float(os.getenv("RAG_MIN_RETRIEVER_SCORE", "0.20"))
+        self.min_retriever_score = float(os.getenv("RAG_MIN_RETRIEVER_SCORE", "0.15"))
 
-        rerank_threshold = os.getenv("RAG_MIN_RERANK_SCORE", "0.6").strip()
+        rerank_threshold = os.getenv("RAG_MIN_RERANK_SCORE", "").strip()
         self.min_rerank_score = float(rerank_threshold) if rerank_threshold else None
 
         self.debug_retrieval = os.getenv("RAG_DEBUG_RETRIEVAL", "").strip().lower() in {
@@ -42,16 +34,7 @@ class AgentSupervisor:
         }
 
         self.reranker = Reranker()
-
-        self.hf_client = HFInferenceClient(
-            api_token=os.getenv("HF_TOKEN", ""),
-            generation_model=os.getenv(
-                "HF_GENERATION_MODEL",
-                "meta-llama/Llama-3.2-1B-Instruct:novita"
-            ),
-            timeout=120,
-        )
-
+        self.generation_client, self.generation_error = create_generation_client(task="generation")
 
     def set_active_document(self, index, metadata, tables_raw):
 
@@ -62,14 +45,11 @@ class AgentSupervisor:
         )
 
         self.tables_raw = tables_raw or []
-
         self.doc_loaded = True
-
 
     def has_active_document(self):
 
         return self.doc_loaded and self.retriever is not None
-
 
     def _load_tables(self, table_ids):
 
@@ -84,14 +64,10 @@ class AgentSupervisor:
                 continue
 
             if table.get("table_type") == "structured":
-
                 html = table.get("table_html")
-
                 if html:
                     loaded_tables.append(html)
-
             elif table.get("raw_text"):
-
                 loaded_tables.append(table.get("raw_text"))
 
         return loaded_tables
@@ -101,7 +77,6 @@ class AgentSupervisor:
         grounded_matches = []
 
         for result in ranked_results:
-
             retriever_score = result.get("score")
             rerank_score = result.get("rerank_score")
 
@@ -145,32 +120,15 @@ class AgentSupervisor:
             },
         )
 
-
-    # =====================================================
-    # PURE RAG HANDLER
-    # =====================================================
-
     def handle(self, query: str):
 
-        # =====================================================
-        # INTENT CHECK (for pytest compatibility)
-        # =====================================================
-
         intent = classify_intent(query)
-
-
-        # =====================================================
-        # ACTION FLOW (used only if explicitly requested)
-        # =====================================================
 
         if intent == "ACTION":
 
             try:
-
-                raw_output = self.hf_client.generate(query)
-
-            except HFGenerationError:
-
+                raw_output = self.generation_client.generate(query)
+            except self.generation_error:
                 return {
                     "type": "action",
                     "answer": "Model temporarily unavailable."
@@ -179,14 +137,12 @@ class AgentSupervisor:
             import json
 
             try:
-
                 extracted = json.loads(raw_output)
-                
+
                 if not isinstance(extracted, dict):
                     raise ValueError("Output must be a dictionary")
 
             except Exception:
-
                 extracted = {
                     "department": "IT",
                     "issue_summary": query,
@@ -194,41 +150,26 @@ class AgentSupervisor:
                 }
 
             return {
-
                 "type": "action",
-
                 "action": "create_ticket",
-
                 "department": extracted.get("department", "IT"),
-
                 "description": extracted.get("issue_summary", query),
-
                 "priority": extracted.get("priority", "Medium")
-
             }
 
-
-        # =====================================================
-        # INFORMATION FLOW (PURE RAG)
-        # =====================================================
-
         if not self.has_active_document():
-
             return {
                 "type": "information",
                 "answer": "Please upload a PDF first."
             }
 
-
         candidates = self.retriever.retrieve(query)
 
         if not candidates:
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
-
 
         ranked_results = self.reranker.rerank(
             query,
@@ -236,117 +177,81 @@ class AgentSupervisor:
             top_k=7
         )
 
-
         if not ranked_results:
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
-
 
         grounded_results = self._select_grounded_matches(ranked_results)
         self._log_retrieval(candidates, ranked_results, grounded_results)
 
         if not grounded_results:
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
 
-
         context_payload = build_context(grounded_results)
-
         context_items = context_payload.get("context", [])
 
         if not context_items:
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
 
-
         top_matches = context_items[:self.max_context_chunks]
-
 
         context_parts = []
 
         for chunk in top_matches:
-
             pages = chunk.get("pages", [])
-
             page_str = ", ".join(str(p) for p in pages) if pages else "Unknown"
-
             text = chunk.get("text", "").strip()
 
             if text:
-
                 context_parts.append(
                     f"[Source: Page {page_str}]\n{text}"
                 )
 
-
         merged_text = "\n\n---\n\n".join(context_parts)
-
 
         table_ids = set()
 
         for chunk in top_matches:
-
             table_ids.update(chunk.get("tables", []))
-
 
         raw_tables = self._load_tables(table_ids)
 
-
         prompt = build_prompt(
-
             question=query,
-
             section_text=merged_text,
-
             tables=raw_tables,
-
             page="Unknown",
-
         )
 
-
         try:
-
-            answer = self.hf_client.generate(prompt)
-
-        except HFGenerationError:
-
+            answer = self.generation_client.generate(prompt)
+        except self.generation_error:
             return {
                 "type": "information",
                 "answer": "Model temporarily unavailable."
             }
 
-
         if not answer:
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
-
 
         if answer.strip() == "Information not found in the document.":
-
             return {
                 "type": "information",
                 "answer": refusal_response()
             }
 
-
         return {
-
             "type": "information",
-
             "answer": answer.strip()
-
         }
-

@@ -38,7 +38,7 @@ class HFInferenceClient:
         self.generation_model = (
             generation_model
             or os.getenv("HF_GENERATION_MODEL")
-            or "meta-llama/Llama-3.2-1B-Instruct:novita"
+            or "meta-llama/Llama-3.2-3B-Instruct:novita"
         )
 
         # Timeout and retry config
