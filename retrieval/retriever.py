@@ -1,9 +1,25 @@
-﻿import faiss
+import faiss
 import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from rank_bm25 import BM25Okapi
 
 MODEL_NAME = "BAAI/bge-base-en"
+RRF_K = 60
+
+
+def _tokenize(text: str) -> list:
+    return text.lower().split()
+
+
+def _reciprocal_rank_fusion(ranked_lists: list, k: int = RRF_K) -> dict:
+    """Merge multiple ranked lists into {chunk_id: rrf_score}."""
+    scores = {}
+    for ranked in ranked_lists:
+        for rank, item in enumerate(ranked):
+            cid = item["chunk_id"]
+            scores[cid] = scores.get(cid, 0.0) + 1.0 / (k + rank + 1)
+    return scores
 
 
 class Retriever:
@@ -45,35 +61,63 @@ class Retriever:
                 self.meta = json.load(f)
 
         self.initial_top_k = initial_top_k
+        self._build_bm25()
 
-    def retrieve(self, query: str):
-        query_vec = self.model.encode(
-            [query],
-            normalize_embeddings=True
-        )
+    def _build_bm25(self):
+        corpus = [_tokenize(m.get("chunk_text", "")) for m in self.meta]
+        self.bm25 = BM25Okapi(corpus)
 
-        scores, indices = self.index.search(
-            query_vec.astype(np.float32),
-            self.initial_top_k
-        )
-
+    def _dense_retrieve(self, query: str) -> list:
+        query_vec = self.model.encode([query], normalize_embeddings=True)
+        scores, indices = self.index.search(query_vec.astype(np.float32), self.initial_top_k)
         results = []
-
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0:
                 continue
-
             meta = self.meta[idx]
-
             results.append({
-                "score": float(score),                 # cosine similarity
+                "score": float(score),
                 "chunk_id": meta["chunk_id"],
                 "section": meta.get("section", ""),
                 "pages": meta.get("pages", []),
                 "tables": meta.get("tables", []),
                 "images": meta.get("images", []),
-                # canonical text field
-                "chunk_text": meta.get("chunk_text", "")
+                "chunk_text": meta.get("chunk_text", ""),
             })
-
         return results
+
+    def _bm25_retrieve(self, query: str) -> list:
+        tokens = _tokenize(query)
+        bm25_scores = self.bm25.get_scores(tokens)
+        top_indices = np.argsort(bm25_scores)[::-1][: self.initial_top_k]
+        results = []
+        for idx in top_indices:
+            meta = self.meta[idx]
+            results.append({
+                "score": float(bm25_scores[idx]),
+                "chunk_id": meta["chunk_id"],
+                "section": meta.get("section", ""),
+                "pages": meta.get("pages", []),
+                "tables": meta.get("tables", []),
+                "images": meta.get("images", []),
+                "chunk_text": meta.get("chunk_text", ""),
+            })
+        return results
+
+    def retrieve(self, query: str) -> list:
+        dense_results = self._dense_retrieve(query)
+        bm25_results = self._bm25_retrieve(query)
+
+        rrf_scores = _reciprocal_rank_fusion([dense_results, bm25_results])
+
+        # Build lookup from chunk_id → full result dict (dense takes precedence for metadata)
+        chunk_map = {r["chunk_id"]: r for r in bm25_results}
+        chunk_map.update({r["chunk_id"]: r for r in dense_results})
+
+        merged = []
+        for chunk_id, rrf_score in sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True):
+            entry = dict(chunk_map[chunk_id])
+            entry["score"] = rrf_score
+            merged.append(entry)
+
+        return merged[: self.initial_top_k]
