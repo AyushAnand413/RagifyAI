@@ -1,5 +1,6 @@
 ﻿import os
 
+from agent.intent_classifier import classify_intent
 from agent.prompt_builder import build_prompt
 from agent.refusal import refusal_response
 
@@ -8,18 +9,6 @@ from llm.hf_inference_client import HFInferenceClient, HFGenerationError
 from retrieval.retriever import Retriever
 from retrieval.reranker import Reranker
 from retrieval.context_builder import build_context
-
-
-# =====================================================
-# TEST COMPATIBILITY STUB
-# =====================================================
-# Required because pytest expects this symbol.
-# We force INFORMATION always (pure RAG mode).
-# =====================================================
-
-def classify_intent(_query: str) -> str:
-    return "INFORMATION"
-
 
 
 class AgentSupervisor:
@@ -94,16 +83,7 @@ class AgentSupervisor:
 
     def handle(self, query: str):
 
-        # =====================================================
-        # INTENT CHECK (for pytest compatibility)
-        # =====================================================
-
         intent = classify_intent(query)
-
-
-        # =====================================================
-        # ACTION FLOW (used only if explicitly requested)
-        # =====================================================
 
         if intent == "ACTION":
 
