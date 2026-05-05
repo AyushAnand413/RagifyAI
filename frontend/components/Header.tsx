@@ -1,31 +1,41 @@
 "use client"
-import { Settings, UploadCloud } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { useStore } from '../store/useStore'
 
 export function Header() {
   const documents = useStore(state => state.documents)
   const indexedCount = documents.filter(d => d.status === 'indexed').length
-
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-border-subtle bg-background shrink-0">
-      <div className="flex items-center">
-        <h1 className="text-lg tracking-[0.12em] font-medium text-text-primary">Ragify·AI</h1>
-      </div>
-      
-      <div className="hidden md:flex items-center gap-2 text-sm text-text-secondary">
-        <span className="w-2 h-2 rounded-full bg-accent-success" />
-        Connected • {documents.length} docs ({indexedCount} indexed)
+    <header className="h-14 flex items-center justify-between px-5 border-b border-border-subtle bg-background shrink-0">
+      {/* Logo */}
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-accent-primary to-blue-400 flex items-center justify-center shrink-0">
+          <span className="text-[10px] font-bold text-white leading-none">R</span>
+        </div>
+        <h1 className="text-[15px] font-semibold text-text-primary tracking-tight">
+          Ragify<span className="text-accent-primary">·</span>AI
+        </h1>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button 
-          className="group flex items-center gap-2 bg-accent-primary hover:bg-blue-600 text-white px-4 py-2 rounded-[4px] text-[14px] font-medium transition-all active:scale-[0.98] shadow-sm"
-        >
-          <UploadCloud size={16} className="group-hover:translate-y-[-1px] transition-transform" />
-          Upload
-        </button>
-        <button className="p-2 text-text-secondary hover:text-text-primary hover:bg-background-hover rounded-[4px] transition-colors">
-          <Settings size={18} />
+      {/* Status indicator */}
+      <div className="hidden md:flex items-center gap-2 text-[12px] text-text-secondary">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-success opacity-60" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-success" />
+        </span>
+        <span>Connected</span>
+        {documents.length > 0 && (
+          <>
+            <span className="text-border-emphasized">·</span>
+            <span className="font-mono">{indexedCount}/{documents.length} docs</span>
+          </>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button className="p-2 text-text-secondary hover:text-text-primary hover:bg-background-hover rounded-lg transition-colors">
+          <Settings size={16} />
         </button>
       </div>
     </header>

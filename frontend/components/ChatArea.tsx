@@ -1,157 +1,222 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
-import { Send, AlertCircle, Bot, User, ChevronDown } from 'lucide-react'
+import { Send, AlertCircle, Bot, Sparkles, ChevronDown } from 'lucide-react'
 import { useStore, type Message } from '../store/useStore'
 import { cn } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { sendChat } from '../lib/api/client'
 
+const SUGGESTIONS = [
+  'What are the key findings?',
+  'Summarize the main points',
+  'What topics are covered?',
+]
+
 export function ChatArea() {
   const { messages, addMessage, documents, isGenerating, setGenerating } = useStore()
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, isGenerating])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Auto-grow textarea
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px'
+  }, [input])
+
+  const submit = async () => {
     if (!input.trim() || isGenerating) return
 
     const userQuery = input.trim()
     setInput('')
-    
-    // Add User Message
-    addMessage({
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: userQuery,
-    })
 
+    addMessage({ id: crypto.randomUUID(), role: 'user', content: userQuery })
     setGenerating(true)
 
     try {
       const hasDocs = documents.some(d => d.status === 'indexed')
       const assistantId = crypto.randomUUID()
-      
+
       if (!hasDocs) {
-        // Error state: No documents
         addMessage({
           id: assistantId,
           role: 'assistant',
-          content: "I couldn't find information about this in the uploaded documents.\n\nTry uploading documents first.",
-          error: true
+          content: 'No indexed documents found. Upload and index a PDF first, then ask your question.',
+          error: true,
         })
-        setGenerating(false)
         return
       }
 
-      const res = await sendChat({ query: userQuery });
-      
-      if (res.success && res.data && res.data.answer) {
-        addMessage({
-          id: assistantId,
-          role: 'assistant',
-          content: res.data.answer,
-        })
+      const res = await sendChat({ query: userQuery })
+
+      if (res.success && res.data?.answer) {
+        addMessage({ id: assistantId, role: 'assistant', content: res.data.answer })
       } else {
         addMessage({
           id: assistantId,
           role: 'assistant',
-          content: "Sorry, I received an invalid response from the server.",
-          error: true
+          content: 'Received an unexpected response from the server. Please try again.',
+          error: true,
         })
       }
     } catch (err: any) {
       addMessage({
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: err?.message || "An error occurred while communicating with the backend.",
-        error: true
+        content: err?.message || 'Network error — check that the backend is running.',
+        error: true,
       })
     } finally {
       setGenerating(false)
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      submit()
+    }
+  }
+
   return (
     <div className="flex flex-col h-full relative">
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-hide" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
-          
+      {/* Messages scroll area */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-6 scrollbar-hide" ref={scrollRef}>
+        <div className="max-w-3xl mx-auto flex flex-col gap-4 pb-52">
+
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full mt-32 text-center fade-in">
-              <div className="w-12 h-12 rounded-full bg-background-card border border-border-subtle flex items-center justify-center mb-6">
-                <Bot size={24} className="text-text-secondary" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="flex flex-col items-center justify-center mt-24 text-center select-none"
+            >
+              <div className="relative mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-primary/20 to-accent-success/10 border border-accent-primary/20 flex items-center justify-center">
+                  <Sparkles size={22} className="text-accent-primary" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-accent-success border-2 border-background" />
               </div>
-              <h2 className="text-[16px] font-medium text-text-primary mb-2">Ask me anything about your docs</h2>
-            </div>
+              <h2 className="text-[17px] font-semibold text-text-primary mb-1.5">Ask me anything</h2>
+              <p className="text-[13px] text-text-secondary max-w-xs leading-relaxed">
+                Upload a PDF in the sidebar, then ask questions about its content.
+              </p>
+            </motion.div>
           ) : (
-            messages.map(msg => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))
+            messages.map(msg => <MessageBubble key={msg.id} message={msg} />)
           )}
-          
-          {isGenerating && (
-            <div className="flex items-start gap-4 animate-fade-in">
-              <div className="mt-1 bg-background-card rounded-md p-2 border border-border-subtle text-text-secondary">
-                <Bot size={16} />
-              </div>
-              <div className="flex space-x-1 h-10 items-center">
-                <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce"></div>
-              </div>
-            </div>
-          )}
+
+          {/* Typing indicator bubble */}
+          <AnimatePresence>
+            {isGenerating && (
+              <motion.div
+                key="typing"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-end gap-2.5"
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-primary/20 to-accent-success/10 border border-border-emphasized flex items-center justify-center shrink-0">
+                  <Bot size={13} className="text-accent-primary" />
+                </div>
+                <div className="bg-background-card border border-border-subtle rounded-2xl rounded-bl-sm px-4 py-3">
+                  <div className="flex items-center gap-1.5">
+                    {[0, 1, 2].map(i => (
+                      <motion.span
+                        key={i}
+                        className="block w-1.5 h-1.5 rounded-full bg-text-tertiary"
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.14, ease: 'easeInOut' }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </div>
       </div>
 
-      <div className="absolute bottom-0 w-full bg-gradient-to-t from-background via-background to-transparent pb-6 pt-10 px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="max-w-3xl mx-auto flex flex-col gap-3">
+      {/* Floating input bar */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-10 pb-4 px-4 md:px-6">
+        <div className="max-w-3xl mx-auto flex flex-col gap-2">
+
+          {/* Suggestion chips — shown only on empty state */}
+          <AnimatePresence>
             {messages.length === 0 && (
-              <div className="flex flex-wrap items-center gap-2 pb-1">
-                {['What are the key findings?', 'Summarize the main points', 'What topics are covered?'].map((q, i) => (
-                  <button 
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-wrap gap-2 pb-1"
+              >
+                {SUGGESTIONS.map((q, i) => (
+                  <button
                     key={i}
-                    onClick={() => setInput(q)}
-                    className="px-4 py-1.5 rounded-full bg-background-card hover:bg-background-hover text-[13px] text-text-secondary hover:text-text-primary transition-colors border border-border-subtle"
+                    onClick={() => { setInput(q); textareaRef.current?.focus() }}
+                    className="px-3.5 py-1.5 rounded-full bg-background-card hover:bg-background-hover text-[12px] text-text-secondary hover:text-text-primary transition-colors border border-border-subtle"
                   >
                     {q}
                   </button>
                 ))}
-              </div>
+              </motion.div>
             )}
-            <form 
-              onSubmit={handleSubmit}
-              className="relative flex items-center bg-background-card border border-border-emphasized rounded-lg overflow-hidden focus-within:border-accent-primary focus-within:ring-1 focus-within:ring-accent-primary transition-all shadow-sm"
-            >
-              <input
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                disabled={isGenerating}
-                placeholder={isGenerating ? "Processing..." : "Ask a question..."}
-                className="flex-1 bg-transparent px-4 py-4 text-[15px] outline-none text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
-              />
+          </AnimatePresence>
+
+          {/* Input box */}
+          <div className={cn(
+            "relative flex items-end bg-background-card border rounded-2xl shadow-lg transition-all duration-200",
+            isGenerating
+              ? "border-border-subtle opacity-75"
+              : "border-border-emphasized focus-within:border-accent-primary focus-within:ring-1 focus-within:ring-accent-primary/25"
+          )}>
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isGenerating}
+              placeholder={isGenerating ? 'Generating response…' : 'Ask about your documents…'}
+              className="flex-1 resize-none bg-transparent px-4 py-3.5 text-[14px] outline-none text-text-primary placeholder:text-text-tertiary disabled:cursor-not-allowed leading-relaxed overflow-y-auto scrollbar-hide"
+              style={{ maxHeight: 140 }}
+            />
+            <div className="p-2 shrink-0 flex items-end">
               <button
-                type="submit"
+                onClick={submit}
                 disabled={!input.trim() || isGenerating}
-                className="absolute right-2 p-2 bg-accent-primary hover:bg-blue-600 text-white rounded-md disabled:opacity-50 transition-colors"
-                style={{ backgroundColor: input.trim() ? '#4a7dff' : '' }}
+                className={cn(
+                  "p-2 rounded-xl transition-all active:scale-95",
+                  input.trim() && !isGenerating
+                    ? "bg-accent-primary hover:bg-blue-500 text-white shadow-sm"
+                    : "bg-background-hover text-text-tertiary cursor-not-allowed"
+                )}
               >
-                <Send size={18} />
+                {isGenerating ? (
+                  <motion.span
+                    className="block w-[18px] h-[18px] border-2 border-text-tertiary border-t-transparent rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+                  />
+                ) : (
+                  <Send size={16} />
+                )}
               </button>
-            </form>
-            <div className="text-center mt-1">
-              <span className="text-[12px] text-text-tertiary font-mono">RagifyAI can make mistakes. Verify important info.</span>
             </div>
           </div>
+
+          <p className="text-center text-[11px] text-text-tertiary font-mono">
+            Enter to send · Shift+Enter for new line
+          </p>
         </div>
       </div>
     </div>
@@ -163,49 +228,49 @@ function MessageBubble({ message }: { message: Message }) {
   const [citationExpanded, setCitationExpanded] = useState(false)
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start"
-      )}
+      transition={{ duration: 0.2 }}
+      className={cn('flex gap-2.5', isUser ? 'justify-end' : 'justify-start items-end')}
     >
-      <div className={cn(
-        "max-w-[85%] rounded-lg p-5 flex flex-col gap-3",
-        isUser 
-          ? "bg-background-hover border border-border-subtle text-text-primary" 
-          : cn(
-              "bg-background text-text-primary border-l-[3px]",
-              message.error ? "border-l-accent-warning border-y border-r border-border-subtle" : "border-l-accent-success border-y border-r border-border-subtle"
-            )
-      )}>
-        <div className="flex items-start gap-3">
-          {!isUser && (
-            <div className={cn(
-              "mt-0.5",
-               message.error ? "text-accent-warning" : "text-accent-success"
-            )}>
-              {message.error ? <AlertCircle size={18} /> : <Bot size={18} />}
-            </div>
-          )}
-          
-          <div className="flex-1 whitespace-pre-wrap leading-relaxed text-[15px]">
-            {message.content}
-          </div>
+      {/* Bot avatar */}
+      {!isUser && (
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-primary/20 to-accent-success/10 border border-border-emphasized flex items-center justify-center shrink-0 mb-0.5">
+          {message.error
+            ? <AlertCircle size={13} className="text-accent-warning" />
+            : <Bot size={13} className="text-accent-primary" />
+          }
+        </div>
+      )}
+
+      <div className={cn('max-w-[80%] flex flex-col gap-2', isUser ? 'items-end' : 'items-start')}>
+        {/* Bubble */}
+        <div className={cn(
+          'px-4 py-3 text-[14px] leading-relaxed whitespace-pre-wrap break-words',
+          isUser
+            ? 'bg-accent-primary text-white rounded-2xl rounded-tr-sm shadow-md'
+            : message.error
+              ? 'bg-accent-warning/10 border border-accent-warning/25 text-text-primary rounded-2xl rounded-bl-sm'
+              : 'bg-background-card border border-border-subtle text-text-primary rounded-2xl rounded-bl-sm'
+        )}>
+          {message.content}
         </div>
 
+        {/* Citation accordion */}
         {message.citation && (
-          <div className="mt-2 ml-7">
-            <button 
+          <div className="w-full">
+            <button
               onClick={() => setCitationExpanded(!citationExpanded)}
-              className="flex items-center gap-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors bg-background-card px-3 py-1.5 rounded border border-border-subtle"
+              className="flex items-center gap-2 text-[12px] text-text-secondary hover:text-text-primary transition-colors bg-background-card px-3 py-1.5 rounded-lg border border-border-subtle w-full"
             >
-              <span className="text-accent-primary">📌</span>
-              Source: {message.citation.file} • Page {message.citation.page}
-              <ChevronDown 
-                size={14} 
-                className={cn("ml-1 transition-transform", citationExpanded && "rotate-180")} 
+              <span>📌</span>
+              <span className="flex-1 text-left truncate">
+                {message.citation.file} · Page {message.citation.page}
+              </span>
+              <ChevronDown
+                size={12}
+                className={cn('shrink-0 transition-transform', citationExpanded && 'rotate-180')}
               />
             </button>
             <AnimatePresence>
@@ -216,8 +281,7 @@ function MessageBubble({ message }: { message: Message }) {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-2 p-3 bg-background-card border border-border-subtle rounded text-[13px] text-text-secondary font-mono leading-relaxed relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-border-emphasized rounded-l" />
+                  <div className="mt-1.5 p-3 bg-background-card border border-border-subtle border-l-2 border-l-accent-primary rounded-lg text-[12px] text-text-secondary font-mono leading-relaxed">
                     {message.citation.text}
                   </div>
                 </motion.div>
