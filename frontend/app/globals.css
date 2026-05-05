@@ -6,6 +6,10 @@
   body {
     @apply bg-background text-text-primary font-sans antialiased;
   }
+
+  ::selection {
+    background-color: rgba(74, 125, 255, 0.25);
+  }
 }
 
 @layer utilities {
@@ -15,5 +19,21 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Thin scrollbar for document list */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3f transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #3a3a3f;
+    border-radius: 9999px;
   }
 }
